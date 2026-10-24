@@ -237,7 +237,7 @@ function Dial({
         max={max}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        onDoubleClick={() => onChange(label === "Intensity" ? 72 : label === "Grain" ? 24 : 0)}
+        onDoubleClick={() => onChange(label === "Intensity" ? 85 : label === "Grain" ? 34 : 0)}
       />
       <span className="text-right font-mono text-sm tabular-nums text-primary">{fmt(value)}</span>
     </label>
