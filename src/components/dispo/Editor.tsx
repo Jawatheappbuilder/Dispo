@@ -151,6 +151,10 @@ export function Editor({
       </div>
 
       <section className="body-panel mt-4 flex-1 rounded-t-3xl px-5 pt-5 safe-bottom">
+        <div className="mb-4 grid grid-cols-2 gap-2" role="group" aria-label="Disposable camera lighting">
+          <button type="button" aria-pressed={settings.preset !== "nightflash800"} onClick={() => set("preset", "disposable800")} className={`key rounded-xl px-4 py-3 text-left font-semibold ${settings.preset !== "nightflash800" ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>☀ No flash<span className="block text-xs font-normal opacity-75">Daylight film</span></button>
+          <button type="button" aria-pressed={settings.preset === "nightflash800"} onClick={() => set("preset", "nightflash800")} className={`key rounded-xl px-4 py-3 text-left font-semibold ${settings.preset === "nightflash800" ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>⚡ Flash<span className="block text-xs font-normal opacity-75">Indoor snapshots</span></button>
+        </div>
         <div className="-mx-1 flex gap-2 overflow-x-auto pb-3">
           {(Object.keys(PRESETS) as PresetId[]).map((id) => (
             <button
