@@ -126,8 +126,8 @@ export function Editor({
       <div className="px-3">
         <div
           ref={boxRef}
-          className="relative mx-auto max-h-[58dvh] touch-none select-none overflow-hidden rounded-xl bg-muted"
-          style={{ aspectRatio: String(aspect), maxWidth: `calc(58dvh * ${aspect})` }}
+          className="relative mx-auto max-h-[42dvh] touch-none select-none overflow-hidden rounded-xl bg-muted"
+          style={{ aspectRatio: String(aspect), maxWidth: `calc(42dvh * ${aspect})` }}
           onPointerDown={(e) => {
             (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
             dragTo(e.clientX);
@@ -150,7 +150,7 @@ export function Editor({
         </div>
       </div>
 
-      <section className="body-panel mt-4 flex-1 rounded-t-3xl px-5 pt-5 safe-bottom">
+      <section className="body-panel mt-3 flex-1 rounded-t-3xl px-5 pt-4 pb-[calc(env(safe-area-inset-bottom)+7rem)]">
         <div className="mb-4 grid grid-cols-2 gap-2" role="group" aria-label="Disposable camera lighting">
           <button type="button" aria-pressed={settings.preset !== "nightflash800"} onClick={() => set("preset", "disposable800")} className={`key rounded-xl px-4 py-3 text-left font-semibold ${settings.preset !== "nightflash800" ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>☀ No flash<span className="block text-xs font-normal opacity-75">Daylight film</span></button>
           <button type="button" aria-pressed={settings.preset === "nightflash800"} onClick={() => set("preset", "nightflash800")} className={`key rounded-xl px-4 py-3 text-left font-semibold ${settings.preset === "nightflash800" ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>⚡ Flash<span className="block text-xs font-normal opacity-75">Indoor snapshots</span></button>
@@ -186,7 +186,7 @@ export function Editor({
           <Toggle label="Border" sub="print frame" on={settings.frame} onClick={() => set("frame", !settings.frame)} />
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-3 pb-12">
+        <div className="mt-5 grid grid-cols-2 gap-3 pb-4">
           <button
             type="button"
             disabled={!!busy}
@@ -208,7 +208,7 @@ export function Editor({
       </section>
 
       {toast && (
-        <div className="fixed inset-x-0 bottom-8 z-50 flex justify-center px-4 animate-rise">
+        <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+6rem)] z-50 flex justify-center px-4 animate-rise">
           <p className="rounded-full bg-cream px-5 py-3 text-sm font-medium text-primary-foreground">{toast}</p>
         </div>
       )}
