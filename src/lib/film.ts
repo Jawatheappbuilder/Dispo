@@ -93,17 +93,17 @@ export const PRESETS: Record<PresetId, PresetDef> = {
     name: "Night Flash 800",
     iso: "800",
     blurb: "Flash look (simulated in post): bright subject, deep falloff, cool backdrop.",
-    r: { lift: 0.035, gain: 0.98, gamma: 1.0, contrast: 1.26, shoulder: 2.6 },
-    g: { lift: 0.035, gain: 0.97, gamma: 1.0, contrast: 1.24, shoulder: 2.5 },
-    b: { lift: 0.055, gain: 0.95, gamma: 1.0, contrast: 1.2, shoulder: 2.3 },
-    saturation: 1.04,
-    shadowCyan: 0.05,
-    highlightWarm: 0.02,
+    r: { lift: 0.035, gain: 0.98, gamma: 1.0, contrast: 1.12, shoulder: 0.7 },
+    g: { lift: 0.035, gain: 0.97, gamma: 1.0, contrast: 1.12, shoulder: 0.65 },
+    b: { lift: 0.055, gain: 0.95, gamma: 1.0, contrast: 1.1, shoulder: 0.6 },
+    saturation: 0.985,
+    shadowCyan: 0.003,
+    highlightWarm: 0.002,
     grain: 1.2,
-    vignette: 0.5,
-    soft: 0.5,
-    halation: 0.35,
-    fringe: 1.1,
+    vignette: 0.17,
+    soft: 0.23,
+    halation: 0.1,
+    fringe: 0.35,
     flash: 1,
   },
 };
@@ -216,7 +216,7 @@ export function renderFilm(
     const lg = buildChannelLut(p.g, ev, 1 + warm * 0.015);
     const lb = buildChannelLut(p.b, ev, 1 - warm * 0.09);
     const k = s.intensity / 100;
-    const grainAmt = (s.grain / 100) * p.grain * 0.038 * k * (1 + lowLight * 0.55);
+    const grainAmt = (s.grain / 100) * p.grain * 0.046 * k * (1 + lowLight * 0.5);
     const grainCell = Math.max(1, Math.round(Math.max(w, h) / 1500));
     const seed = opts.seed | 0;
     const cx = w / 2;
@@ -289,7 +289,7 @@ export function renderFilm(
         // flash look (simulated): hot centre, steep falloff, cool background
         if (p.flash > 0) {
           const fc = 1 - smooth(0, 0.75, d2);
-          const fm = 0.78 + 0.5 * fc;
+          const fm = 0.92 + 0.16 * fc;
           r *= fm;
           g *= fm;
           b *= fm * (1 + 0.06 * (1 - fc));
