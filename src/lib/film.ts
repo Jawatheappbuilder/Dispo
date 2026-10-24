@@ -57,9 +57,9 @@ export const PRESETS: Record<PresetId, PresetDef> = {
     name: "Disposable 800",
     iso: "800",
     blurb: "Signature consumer colour negative. Warm highlights, cool shadows, honest grain.",
-    r: { lift: 0.012, gain: 0.995, gamma: 1.015, contrast: 1.21, shoulder: 0.4 },
-    g: { lift: 0.011, gain: 0.99, gamma: 1.01, contrast: 1.2, shoulder: 0.39 },
-    b: { lift: 0.014, gain: 0.985, gamma: 1.01, contrast: 1.19, shoulder: 0.38 },
+    r: { lift: 0.012, gain: 0.995, gamma: 1.015, contrast: 1.13, shoulder: 0.48 },
+    g: { lift: 0.011, gain: 0.99, gamma: 1.01, contrast: 1.12, shoulder: 0.47 },
+    b: { lift: 0.014, gain: 0.985, gamma: 1.01, contrast: 1.11, shoulder: 0.46 },
     saturation: 0.89,
     shadowCyan: 0.002,
     highlightWarm: 0.003,
@@ -220,7 +220,7 @@ export function renderFilm(
     const lowLight = 1 - smooth(0.22, 0.55, sceneLuma);
 
     // Dazz-style Kodak reference: less iPhone HDR brightness, while preserving skin.
-    const referenceEV = s.preset === "disposable800" ? -0.52 : 0;
+    const referenceEV = s.preset === "disposable800" ? -0.13 : 0;
     const ev = s.exposure / 100 + referenceEV;
     const warm = s.warmth / 50; // -1..1
     const lr = buildChannelLut(p.r, ev, 1 + warm * 0.06);
@@ -282,6 +282,14 @@ export function renderFilm(
         // Protect orange/red accents and skin from excessive desaturation.
         const warmChroma = smooth(0.015, 0.22, r - b) * smooth(0.005, 0.1, r - g);
         const sat = p.saturation + (1 - p.saturation) * Math.max(skin * 0.75, warmChroma * 0.85);
+        // Gentle midtone lift preserves faces and indoor detail without flattening blacks.
+        if (s.preset === "disposable800") {
+          const lift = 0.035 * smooth(0.08, 0.3, L) * (1 - smooth(0.58, 0.9, L));
+          r += lift;
+          g += lift;
+          b += lift;
+          L += lift;
+        }
         r = L + (r - L) * sat;
         g = L + (g - L) * sat;
         b = L + (b - L) * sat;
