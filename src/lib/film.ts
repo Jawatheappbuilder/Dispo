@@ -57,13 +57,13 @@ export const PRESETS: Record<PresetId, PresetDef> = {
     name: "Disposable 800",
     iso: "800",
     blurb: "Signature consumer colour negative. Warm highlights, cool shadows, honest grain.",
-    r: { lift: 0.012, gain: 0.995, gamma: 1.015, contrast: 1.16, shoulder: 0.45 },
-    g: { lift: 0.011, gain: 0.99, gamma: 1.01, contrast: 1.15, shoulder: 0.43 },
-    b: { lift: 0.014, gain: 0.985, gamma: 1.01, contrast: 1.14, shoulder: 0.42 },
-    saturation: 0.91,
+    r: { lift: 0.012, gain: 0.995, gamma: 1.015, contrast: 1.21, shoulder: 0.4 },
+    g: { lift: 0.011, gain: 0.99, gamma: 1.01, contrast: 1.2, shoulder: 0.39 },
+    b: { lift: 0.014, gain: 0.985, gamma: 1.01, contrast: 1.19, shoulder: 0.38 },
+    saturation: 0.89,
     shadowCyan: 0.002,
-    highlightWarm: 0.009,
-    grain: 1.18,
+    highlightWarm: 0.003,
+    grain: 1.34,
     vignette: 0.15,
     soft: 0.2,
     halation: 0.1,
@@ -186,7 +186,16 @@ export function renderFilm(
   const work = makeCanvas(w, h);
   const ctx = work.getContext("2d", { willReadFrequently: true })!;
   ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(source, 0, 0, w, h);
+  // Kodak framing: slight centre crop, applied only to processed film.
+  // Preserve output aspect ratio and keep the before comparison uncropped.
+  if (!opts.bypass && s.preset === "disposable800") {
+    const crop = 0.955;
+    const sw = source.width * crop;
+    const sh = source.height * crop;
+    ctx.drawImage(source, (source.width - sw) / 2, (source.height - sh) / 2, sw, sh, 0, 0, w, h);
+  } else {
+    ctx.drawImage(source, 0, 0, w, h);
+  }
 
   if (!opts.bypass) {
     const p = PRESETS[s.preset];
@@ -211,14 +220,14 @@ export function renderFilm(
     const lowLight = 1 - smooth(0.22, 0.55, sceneLuma);
 
     // Dazz-style Kodak reference: less iPhone HDR brightness, while preserving skin.
-    const referenceEV = s.preset === "disposable800" ? -0.38 : 0;
+    const referenceEV = s.preset === "disposable800" ? -0.52 : 0;
     const ev = s.exposure / 100 + referenceEV;
     const warm = s.warmth / 50; // -1..1
     const lr = buildChannelLut(p.r, ev, 1 + warm * 0.06);
     const lg = buildChannelLut(p.g, ev, 1 + warm * 0.015);
     const lb = buildChannelLut(p.b, ev, 1 - warm * 0.09);
     const k = s.intensity / 100;
-    const grainAmt = (s.grain / 100) * p.grain * 0.046 * k * (1 + lowLight * 0.5);
+    const grainAmt = (s.grain / 100) * p.grain * 0.058 * k * (1 + lowLight * 0.5);
     const grainCell = Math.max(1, Math.round(Math.max(w, h) / 1500));
     const seed = opts.seed | 0;
     const cx = w / 2;
@@ -251,7 +260,7 @@ export function renderFilm(
         }
 
         // soft focus toward the edges (cheap plastic lens)
-        const soft = p.soft * (s.preset === "disposable800" ? 0.42 : 0.26) * (0.14 + 0.86 * smooth(0.32, 1, d2));
+        const soft = p.soft * (s.preset === "disposable800" ? 0.7 : 0.26) * (0.28 + 0.72 * smooth(0.32, 1, d2));
         let r = r0 + (blur[i] - r0) * soft;
         let g = g0 + (blur[i + 1] - g0) * soft;
         let b = b0 + (blur[i + 2] - b0) * soft;
