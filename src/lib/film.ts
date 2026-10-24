@@ -15,8 +15,8 @@ export interface FilmSettings {
 
 export const DEFAULT_SETTINGS: FilmSettings = {
   preset: "disposable800",
-  intensity: 72,
-  grain: 24,
+  intensity: 85,
+  grain: 34,
   warmth: 0,
   exposure: 0,
   dateStamp: false,
@@ -57,17 +57,17 @@ export const PRESETS: Record<PresetId, PresetDef> = {
     name: "Disposable 800",
     iso: "800",
     blurb: "Signature consumer colour negative. Warm highlights, cool shadows, honest grain.",
-    r: { lift: 0.055, gain: 0.975, gamma: 0.96, contrast: 1.16, shoulder: 2.2 },
-    g: { lift: 0.05, gain: 0.96, gamma: 0.99, contrast: 1.14, shoulder: 2.0 },
-    b: { lift: 0.07, gain: 0.9, gamma: 1.04, contrast: 1.1, shoulder: 1.8 },
-    saturation: 1.08,
-    shadowCyan: 0.035,
-    highlightWarm: 0.04,
+    r: { lift: 0.012, gain: 0.995, gamma: 1.015, contrast: 1.065, shoulder: 0.6 },
+    g: { lift: 0.011, gain: 0.99, gamma: 1.01, contrast: 1.06, shoulder: 0.55 },
+    b: { lift: 0.014, gain: 0.985, gamma: 1.01, contrast: 1.055, shoulder: 0.5 },
+    saturation: 0.995,
+    shadowCyan: 0.004,
+    highlightWarm: 0.006,
     grain: 1,
-    vignette: 0.32,
-    soft: 0.55,
-    halation: 0.5,
-    fringe: 1,
+    vignette: 0.13,
+    soft: 0.2,
+    halation: 0.1,
+    fringe: 0.3,
     flash: 0,
   },
   golden200: {
@@ -75,17 +75,17 @@ export const PRESETS: Record<PresetId, PresetDef> = {
     name: "Golden Hour 200",
     iso: "200",
     blurb: "Finer grain, honeyed light, gentle contrast for sun-drenched days.",
-    r: { lift: 0.045, gain: 0.99, gamma: 0.92, contrast: 1.08, shoulder: 2.4 },
-    g: { lift: 0.04, gain: 0.95, gamma: 0.97, contrast: 1.07, shoulder: 2.1 },
-    b: { lift: 0.05, gain: 0.83, gamma: 1.08, contrast: 1.05, shoulder: 1.7 },
-    saturation: 1.12,
-    shadowCyan: 0.015,
-    highlightWarm: 0.065,
+    r: { lift: 0.012, gain: 0.995, gamma: 1.005, contrast: 1.04, shoulder: 0.7 },
+    g: { lift: 0.012, gain: 0.99, gamma: 1.01, contrast: 1.04, shoulder: 0.65 },
+    b: { lift: 0.014, gain: 0.975, gamma: 1.015, contrast: 1.04, shoulder: 0.6 },
+    saturation: 1.015,
+    shadowCyan: 0.003,
+    highlightWarm: 0.012,
     grain: 0.55,
-    vignette: 0.26,
-    soft: 0.4,
-    halation: 0.65,
-    fringe: 0.7,
+    vignette: 0.11,
+    soft: 0.16,
+    halation: 0.12,
+    fringe: 0.2,
     flash: 0,
   },
   nightflash800: {
@@ -118,12 +118,12 @@ const smooth = (a: number, b: number, x: number) => {
 export function buildChannelLut(c: Channel, exposureStops: number, gainMul: number): Float32Array {
   const lut = new Float32Array(256);
   const ev = Math.pow(2, exposureStops);
-  const k = c.shoulder * 0.25;
+  const k = c.shoulder * 0.1;
   const shoulderNorm = 1 - Math.exp(-k);
   for (let i = 0; i < 256; i++) {
     let x = (i / 255) * ev;
     // soft highlight shoulder (handles overexposure gracefully)
-    x = (1 - Math.exp(-k * x)) / shoulderNorm;
+    x = k > 0 ? (1 - Math.exp(-k * x)) / shoulderNorm : x;
     x = clamp01(x);
     x = Math.pow(x, c.gamma);
     // midtone density S-curve
@@ -194,6 +194,21 @@ export function renderFilm(
     const src = img.data;
     const orig = new Uint8ClampedArray(src); // read-only copy
     const blur = blurCopy(work, w, h);
+    // Sample a small, evenly spaced luminance grid to adapt the film response to the scene.
+    let sceneLuma = 0;
+    let sceneShadows = 0;
+    let samples = 0;
+    const step = Math.max(1, Math.floor(Math.max(w, h) / 64));
+    for (let sy = 0; sy < h; sy += step) for (let sx = 0; sx < w; sx += step) {
+      const si = (sy * w + sx) * 4;
+      const lum = (0.2126 * orig[si] + 0.7152 * orig[si + 1] + 0.0722 * orig[si + 2]) / 255;
+      sceneLuma += lum;
+      if (lum < 0.22) sceneShadows++;
+      samples++;
+    }
+    sceneLuma /= Math.max(1, samples);
+    const shadowShare = sceneShadows / Math.max(1, samples);
+    const lowLight = 1 - smooth(0.22, 0.55, sceneLuma);
 
     const ev = s.exposure / 100;
     const warm = s.warmth / 50; // -1..1
@@ -201,7 +216,7 @@ export function renderFilm(
     const lg = buildChannelLut(p.g, ev, 1 + warm * 0.015);
     const lb = buildChannelLut(p.b, ev, 1 - warm * 0.09);
     const k = s.intensity / 100;
-    const grainAmt = (s.grain / 100) * p.grain * 0.055 * k;
+    const grainAmt = (s.grain / 100) * p.grain * 0.038 * k * (1 + lowLight * 0.55);
     const grainCell = Math.max(1, Math.round(Math.max(w, h) / 1500));
     const seed = opts.seed | 0;
     const cx = w / 2;
@@ -234,7 +249,7 @@ export function renderFilm(
         }
 
         // soft focus toward the edges (cheap plastic lens)
-        const soft = p.soft * 0.32 * smooth(0.3, 1, d2);
+        const soft = p.soft * 0.26 * smooth(0.42, 1, d2);
         let r = r0 + (blur[i] - r0) * soft;
         let g = g0 + (blur[i + 1] - g0) * soft;
         let b = b0 + (blur[i + 2] - b0) * soft;
@@ -259,15 +274,15 @@ export function renderFilm(
         b = L + (b - L) * sat;
 
         // split toning: cyan shadows, yellow highlights
-        const sh = (1 - L) * (1 - L) * p.shadowCyan;
-        const hi = L * L * p.highlightWarm;
+        const sh = (1 - L) * (1 - L) * p.shadowCyan * (1 - lowLight * 0.5);
+        const hi = L * L * p.highlightWarm * (1 - lowLight * 0.6);
         r += -sh + hi;
         g += sh * 0.25 + hi * 0.7;
         b += sh * 0.7 - hi * 0.9;
 
         // halation: red-orange glow bleeding from bright areas
         const bl = (0.2126 * blur[i] + 0.7152 * blur[i + 1] + 0.0722 * blur[i + 2]) / 255;
-        const hal = Math.max(0, bl - 0.62) * 2.6 * p.halation;
+        const hal = Math.max(0, bl - 0.78) * 1.2 * p.halation;
         r += hal * 0.22;
         g += hal * 0.07;
 
@@ -281,7 +296,7 @@ export function renderFilm(
         }
 
         // lens falloff
-        const v = 1 - p.vignette * 0.45 * smooth(0.2, 1.1, d2);
+        const v = 1 - p.vignette * (0.45 + lowLight * 0.25) * smooth(0.25, 1.1, d2);
         r *= v;
         g *= v;
         b *= v;
@@ -296,14 +311,14 @@ export function renderFilm(
         // luminance-dependent chroma grain (stable seeded)
         if (grainAmt > 0) {
           L = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-          const amp = grainAmt * (0.35 + 2.2 * L * (1 - L) + 0.35 * (1 - L));
+          const amp = grainAmt * (0.22 + 0.9 * (1 - L) + shadowShare * 0.25);
           const gx = (x / grainCell) | 0;
           const n = hash2(gx, gy, seed);
           const nr = hash2(gx, gy, seed + 101);
           const nb = hash2(gx, gy, seed + 202);
-          r += amp * (n * 0.75 + nr * 0.3);
-          g += amp * (n * 0.75);
-          b += amp * (n * 0.75 + nb * 0.38);
+          r += amp * (n * 0.93 + nr * 0.08);
+          g += amp * n * 0.93;
+          b += amp * (n * 0.93 + nb * 0.08);
         }
 
         src[i] = r * 255;
