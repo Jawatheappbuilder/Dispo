@@ -20,7 +20,7 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-const KEY = "dispo.settings.v2";
+const KEY = "dispo.settings.v3";
 const FRAMES = "dispo.frames.v1";
 
 function Index() {
