@@ -1,1 +1,0 @@
-DISPO source migration from Lovable; original project preserved.
