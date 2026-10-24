@@ -57,14 +57,14 @@ export const PRESETS: Record<PresetId, PresetDef> = {
     name: "Disposable 800",
     iso: "800",
     blurb: "Signature consumer colour negative. Warm highlights, cool shadows, honest grain.",
-    r: { lift: 0.012, gain: 0.995, gamma: 1.015, contrast: 1.065, shoulder: 0.6 },
-    g: { lift: 0.011, gain: 0.99, gamma: 1.01, contrast: 1.06, shoulder: 0.55 },
-    b: { lift: 0.014, gain: 0.985, gamma: 1.01, contrast: 1.055, shoulder: 0.5 },
-    saturation: 0.995,
-    shadowCyan: 0.004,
-    highlightWarm: 0.006,
-    grain: 1,
-    vignette: 0.13,
+    r: { lift: 0.012, gain: 0.995, gamma: 1.015, contrast: 1.16, shoulder: 0.45 },
+    g: { lift: 0.011, gain: 0.99, gamma: 1.01, contrast: 1.15, shoulder: 0.43 },
+    b: { lift: 0.014, gain: 0.985, gamma: 1.01, contrast: 1.14, shoulder: 0.42 },
+    saturation: 0.91,
+    shadowCyan: 0.002,
+    highlightWarm: 0.009,
+    grain: 1.18,
+    vignette: 0.15,
     soft: 0.2,
     halation: 0.1,
     fringe: 0.3,
@@ -210,7 +210,9 @@ export function renderFilm(
     const shadowShare = sceneShadows / Math.max(1, samples);
     const lowLight = 1 - smooth(0.22, 0.55, sceneLuma);
 
-    const ev = s.exposure / 100;
+    // Dazz-style Kodak reference: less iPhone HDR brightness, while preserving skin.
+    const referenceEV = s.preset === "disposable800" ? -0.38 : 0;
+    const ev = s.exposure / 100 + referenceEV;
     const warm = s.warmth / 50; // -1..1
     const lr = buildChannelLut(p.r, ev, 1 + warm * 0.06);
     const lg = buildChannelLut(p.g, ev, 1 + warm * 0.015);
@@ -249,7 +251,7 @@ export function renderFilm(
         }
 
         // soft focus toward the edges (cheap plastic lens)
-        const soft = p.soft * 0.26 * smooth(0.42, 1, d2);
+        const soft = p.soft * (s.preset === "disposable800" ? 0.42 : 0.26) * (0.14 + 0.86 * smooth(0.32, 1, d2));
         let r = r0 + (blur[i] - r0) * soft;
         let g = g0 + (blur[i + 1] - g0) * soft;
         let b = b0 + (blur[i + 2] - b0) * soft;
@@ -268,7 +270,9 @@ export function renderFilm(
           const t = (g - b) / (r - b + 1e-4);
           skin = smooth(0.15, 0.4, t) * (1 - smooth(0.6, 0.85, t)) * smooth(0.15, 0.35, L);
         }
-        const sat = p.saturation + (1 - p.saturation) * skin * 0.8 - skin * 0.05;
+        // Protect orange/red accents and skin from excessive desaturation.
+        const warmChroma = smooth(0.015, 0.22, r - b) * smooth(0.005, 0.1, r - g);
+        const sat = p.saturation + (1 - p.saturation) * Math.max(skin * 0.75, warmChroma * 0.85);
         r = L + (r - L) * sat;
         g = L + (g - L) * sat;
         b = L + (b - L) * sat;
@@ -311,7 +315,7 @@ export function renderFilm(
         // luminance-dependent chroma grain (stable seeded)
         if (grainAmt > 0) {
           L = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-          const amp = grainAmt * (0.22 + 0.9 * (1 - L) + shadowShare * 0.25);
+          const amp = grainAmt * (0.42 + 0.7 * (1 - L) + shadowShare * 0.2);
           const gx = (x / grainCell) | 0;
           const n = hash2(gx, gy, seed);
           const nr = hash2(gx, gy, seed + 101);
